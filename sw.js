@@ -1,7 +1,7 @@
 /* Daily Games — app-shell service worker.
    Caches ONLY the shell. Never intercepts or caches any game URL. */
 
-const CACHE = "daily-games-v1";
+const CACHE = "daily-games-v2";
 
 const SHELL = [
   "./",
