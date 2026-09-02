@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daily Games</title>
+<meta name="description" content="One tap to every daily puzzle.">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1115">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Daily Games">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+<script>
+/* ============================================================
+   EDIT ONLY THIS ARRAY to add / remove / reorder games.
+   name : label shown on the tile
+   url  : full URL to open
+   ============================================================ */
+const GAMES = [
+  { name: "NYT Mini",        url: "https://www.nytimes.com/crosswords/game/mini" },
+  { name: "Krillion",        url: "https://krillion.io/" },
+  { name: "Word500",         url: "https://word500.com/" },
+  { name: "Wordle",          url: "https://www.nytimes.com/games/wordle/index.html" },
+  { name: "Globle",          url: "https://globle-game.com/" },
+  { name: "Connections",     url: "https://www.nytimes.com/games/connections" },
+  { name: "MinuteCryptic",   url: "https://www.minutecryptic.com/" },
+  { name: "Quordle",         url: "https://www.merriam-webster.com/games/quordle/" },
+  { name: "Spelling Bee",    url: "https://www.nytimes.com/puzzles/spelling-bee" }
+];
+</script>
+
+<style>
+  :root{
+    --bg:#0f1115;
+    --tile:#191d24;
+    --tile-press:#232935;
+    --line:#2b323d;
+    --text:#e9ecf2;
+    --muted:#98a2b3;
+    --accent:#6ea8fe;
+    --gap:10px;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",
+                Arial,"Noto Sans","Samsung Sans",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior:none;
+  }
+  .app{
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    padding:calc(env(safe-area-inset-top) + 10px)
+            calc(env(safe-area-inset-right) + 12px)
+            calc(env(safe-area-inset-bottom) + 12px)
+            calc(env(safe-area-inset-left) + 12px);
+    gap:10px;
+  }
+  header{
+    display:flex; align-items:baseline; gap:8px; flex:0 0 auto;
+    padding:0 2px;
+  }
+  h1{ font-size:17px; font-weight:650; margin:0; letter-spacing:.2px; }
+  header span{ font-size:12px; color:var(--muted); }
+
+  .grid{
+    flex:1 1 auto;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-auto-rows:minmax(72px,1fr);
+    gap:var(--gap);
+    align-content:stretch;
+  }
+  @media (min-width:600px){ .grid{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
+  @media (min-width:900px){ .grid{ grid-template-columns:repeat(4,minmax(0,1fr)); } }
+  @media (min-width:1200px){ .grid{ grid-template-columns:repeat(5,minmax(0,1fr)); } }
+
+  .tile{
+    min-height:48px;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:8px;
+    padding:10px 8px;
+    background:var(--tile);
+    border:1px solid var(--line);
+    border-radius:14px;
+    color:var(--text);
+    text-decoration:none;
+    text-align:center;
+    transition:background .12s ease, transform .12s ease;
+  }
+  .tile:active{ background:var(--tile-press); transform:scale(.975); }
+  .tile:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  .ico{
+    width:30px; height:30px; flex:0 0 auto;
+    display:grid; place-items:center;
+    border-radius:8px;
+    background:#0d1016;
+    overflow:hidden;
+  }
+  .ico img{ width:26px; height:26px; display:block; object-fit:contain; }
+  .ico .fb{
+    font-size:14px; font-weight:700; color:var(--accent);
+    line-height:1; letter-spacing:.5px;
+  }
+  .label{
+    font-size:14px; font-weight:600; line-height:1.15;
+    word-break:break-word; hyphens:auto;
+  }
+  @media (min-width:600px){ .label{ font-size:15px; } .ico{width:34px;height:34px;} .ico img{width:30px;height:30px;} }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Daily Games</h1>
+    <span id="count"></span>
+  </header>
+  <main class="grid" id="grid"></main>
+</div>
+
+<script>
+(function () {
+  const grid = document.getElementById("grid");
+  const frag = document.createDocumentFragment();
+
+  GAMES.forEach(function (g) {
+    let host = "";
+    try { host = new URL(g.url).hostname; } catch (e) { host = ""; }
+
+    const a = document.createElement("a");
+    a.className = "tile";
+    a.href = g.url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.setAttribute("aria-label", g.name);
+
+    const ico = document.createElement("div");
+    ico.className = "ico";
+
+    // Text fallback: first letter, shown if the favicon fails to load.
+    const fb = document.createElement("span");
+    fb.className = "fb";
+    fb.textContent = g.name.trim().charAt(0).toUpperCase();
+    fb.hidden = true;
+
+    if (host) {
+      const img = document.createElement("img");
+      img.alt = "";
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.referrerPolicy = "no-referrer";
+      img.src = "https://www.google.com/s2/favicons?domain=" +
+                encodeURIComponent(host) + "&sz=64";
+      img.onerror = function () { img.remove(); fb.hidden = false; };
+      ico.appendChild(img);
+    } else {
+      fb.hidden = false;
+    }
+    ico.appendChild(fb);
+
+    const label = document.createElement("span");
+    label.className = "label";
+    label.textContent = g.name;
+
+    a.appendChild(ico);
+    a.appendChild(label);
+    frag.appendChild(a);
+  });
+
+  grid.appendChild(frag);
+  document.getElementById("count").textContent = GAMES.length + " games";
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").catch(function () {});
+    });
+  }
+})();
+</script>
+</body>
+</html>
