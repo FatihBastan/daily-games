@@ -27,7 +27,7 @@ const GAMES = [
   { name: "Wordle",          url: "https://www.nytimes.com/games/wordle/index.html" },
   { name: "Wordle TR",       url: "https://wordleturkce.bundle.app/" },
   { name: "Krillion",        url: "https://krillion.io/" },
-  { name: "Betweenle",       url: "https://betweenle.com/" },
+  { name: "Betweenle",       url: "https://betweenle.com/", icon:false },
   { name: "Connections",     url: "https://www.nytimes.com/games/connections" },
   { name: "MinuteCryptic",   url: "https://www.minutecryptic.com/" },
   { name: "Quordle",         url: "https://www.merriam-webster.com/games/quordle/" },
@@ -156,7 +156,7 @@ const GAMES = [
     fb.textContent = g.name.trim().charAt(0).toUpperCase();
     fb.hidden = true;
 
-    if (host) {
+    if (host && g.icon !== false) {
       const img = document.createElement("img");
       img.alt = "";
       img.loading = "lazy";
